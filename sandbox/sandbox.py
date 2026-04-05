@@ -91,21 +91,30 @@ def _build_tiocsti_block_fd():
 
 
 def main():
-    bind_ops = []  # list of ("ro"|"rw", path), preserving user-specified order
+    bind_ops = []  # list of ("ro"|"rw", host_path, sandbox_path)
 
     def collect_bind(option, opt_str, value, parser):
-        kind = "ro" if option.dest == "read_paths" else "rw"
-        bind_ops.append((kind, value))
+        kind = "ro" if option.dest in ("read_paths", "bind_read") else "rw"
+        if isinstance(value, tuple):
+            bind_ops.append((kind, value[0], value[1]))  # --bind-read/--bind-write
+        else:
+            bind_ops.append((kind, value, os.path.abspath(value)))  # -r/-w
 
     parser = optparse.OptionParser(usage="%prog [options] [--] [command]")
     parser.disable_interspersed_args()
 
     parser.add_option("-r", "--read", action="callback", callback=collect_bind,
                       type="string", dest="read_paths", metavar="PATH",
-                      help="bind PATH read-only in the sandbox")
+                      help="bind PATH read-only in the sandbox (same path inside)")
     parser.add_option("-w", "--write", action="callback", callback=collect_bind,
                       type="string", dest="write_paths", metavar="PATH",
-                      help="bind PATH read-write in the sandbox")
+                      help="bind PATH read-write in the sandbox (same path inside)")
+    parser.add_option("--bind-read", action="callback", callback=collect_bind,
+                      type="string", nargs=2, dest="bind_read", metavar="HOST SANDBOX",
+                      help="bind HOST read-only at SANDBOX inside the sandbox")
+    parser.add_option("--bind-write", action="callback", callback=collect_bind,
+                      type="string", nargs=2, dest="bind_write", metavar="HOST SANDBOX",
+                      help="bind HOST read-write at SANDBOX inside the sandbox")
     parser.add_option("--env", action="append", dest="env_vars",
                       metavar="VAR", help="preserve VAR inside the sandbox")
     parser.add_option("--nonet", action="store_true", default=False,
@@ -136,9 +145,9 @@ def main():
             if os.path.exists(path):
                 bwrap += ["--ro-bind", path, path]
 
-    for kind, path in bind_ops:
+    for kind, host, sandbox in bind_ops:
         flag = "--ro-bind" if kind == "ro" else "--bind"
-        bwrap += [flag, path, os.path.abspath(path)]
+        bwrap += [flag, host, sandbox]
 
     bwrap += ["--setenv", "PATH", os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin")]
 
