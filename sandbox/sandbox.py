@@ -138,7 +138,7 @@ def main():
 
     for kind, path in bind_ops:
         flag = "--ro-bind" if kind == "ro" else "--bind"
-        bwrap += [flag, path, path]
+        bwrap += [flag, path, os.path.abspath(path)]
 
     bwrap += ["--setenv", "PATH", os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin")]
 
