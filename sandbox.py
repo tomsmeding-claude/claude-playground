@@ -27,11 +27,7 @@ _OP = {"SCMP_CMP_NE": seccomp.NE, "SCMP_CMP_LT": seccomp.LT, "SCMP_CMP_LE": secc
 # Map uname machine name to the Docker arch name(s) used in the profile.
 _ARCH_NAMES = {
     "x86_64":  {"amd64", "x32", "x86"},
-    "i686":    {"x86"},
     "aarch64": {"arm64"},
-    "armv7l":  {"arm"},
-    "ppc64le": {"ppc64le"},
-    "s390x":   {"s390x", "s390"},
 }.get(platform.machine(), set())
 
 
