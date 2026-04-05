@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+args=(
+  -r ~/.config/fish -r ~/git/dotfiles/.config/fish
+  -r /etc/resolv.conf
+  -r /usr/share/terminfo
+  -r /usr/share/nvim
+  -r /etc/man_db.conf -r /usr/share/man
+  -r /usr/share/groff
+  --bind-write ~/{claude/,}.claude
+  --bind-write ~/{claude/,}.claude.json
+  --bind-write ~/{claude/,}.local/share/claude
+  --bind-write ~/{claude/,}.local/state/claude
+  -w .
+  --chdir "$PWD"
+)
+"$(dirname "$(realpath "$0")")"/sandbox.py "${args[@]}" -- ~/.local/share/claude/versions/"$(ls -t ~/claude/.local/share/claude/versions/ | head)"
