@@ -100,7 +100,9 @@ def main():
         else:
             bind_ops.append((kind, value, os.path.abspath(value)))  # -r/-w
 
-    parser = optparse.OptionParser(usage="%prog [options] [--] [command]")
+    _fmt = optparse.IndentedHelpFormatter()
+    _fmt._long_opt_fmt = "%s %s"  # use space instead of = between option and metavar
+    parser = optparse.OptionParser(usage="%prog [options] [--] [command]", formatter=_fmt)
     parser.disable_interspersed_args()
 
     parser.add_option("-r", "--read", action="callback", callback=collect_bind,
