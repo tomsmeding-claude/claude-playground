@@ -17,7 +17,7 @@ DEFAULT_BINDS = [
     "/etc/alternatives",
 ]
 
-_SECCOMP_PROFILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+_SECCOMP_PROFILE = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                 "seccomp-default.json")
 
 _OP = {"SCMP_CMP_NE": seccomp.NE, "SCMP_CMP_LT": seccomp.LT, "SCMP_CMP_LE": seccomp.LE,
