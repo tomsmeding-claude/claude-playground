@@ -39,6 +39,9 @@ def main():
 
     opts, args = parser.parse_args()
 
+    if os.getuid() == 0:
+        sys.exit("error: refusing to run as root")
+
     bwrap = ["bwrap",
              "--new-session", "--unshare-all", "--die-with-parent",
              "--proc", "/proc",
