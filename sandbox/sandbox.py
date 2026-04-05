@@ -119,6 +119,8 @@ def main():
                       help="bind HOST read-write at SANDBOX inside the sandbox")
     parser.add_option("--env", action="append", dest="env_vars",
                       metavar="VAR", help="preserve VAR inside the sandbox")
+    parser.add_option("--chdir", action="store", dest="chdir",
+                      metavar="DIR", help="set working directory here in sandbox")
     parser.add_option("--nonet", action="store_true", default=False,
                       help="disable networking (default: share host network)")
     parser.add_option("--bare", action="store_true", default=False,
@@ -158,6 +160,9 @@ def main():
         if val is None:
             sys.exit(f"error: environment variable {var!r} is not set")
         bwrap += ["--setenv", var, val]
+
+    if opts.chdir is not None:
+        bwrap += ["--chdir", os.path.abspath(opts.chdir)]
 
     if args:
         command = args
