@@ -25,10 +25,10 @@ _OP = {"SCMP_CMP_NE": seccomp.NE, "SCMP_CMP_LT": seccomp.LT, "SCMP_CMP_LE": secc
        "SCMP_CMP_MASKED_EQ": seccomp.MASKED_EQ}
 
 # Map uname machine name to the Docker arch name(s) used in the profile.
-_ARCH_NAMES = {
-    "x86_64":  {"amd64", "x32", "x86"},
-    "aarch64": {"arm64"},
-}.get(platform.machine(), set())
+_machine = platform.machine()
+if _machine not in ("x86_64", "aarch64"):
+    sys.exit(f"error: unsupported architecture {_machine!r}")
+_ARCH_NAMES = {"x86_64": {"amd64", "x32", "x86"}, "aarch64": {"arm64"}}[_machine]
 
 
 def _include_entry(entry):
@@ -56,15 +56,14 @@ def _build_seccomp_fd(profile_path):
         if not _include_entry(entry):
             continue
         action = seccomp.ALLOW if entry["action"] == "SCMP_ACT_ALLOW" \
-                 else seccomp.ERRNO(errno_ret)
+                 else seccomp.ERRNO(entry.get("errnoRet", errno_ret))
         # MASKED_EQ: datum_a = mask (value), datum_b = expected (valueTwo, default 0)
         args = [seccomp.Arg(a["index"], _OP[a["op"]], a["value"], a.get("valueTwo", 0))
                 for a in entry.get("args", [])]
         for name in entry["names"]:
-            try:
-                filt.add_rule(action, name, *args)
-            except Exception:
-                pass  # syscall unknown on this architecture
+            if seccomp.resolve_syscall(seccomp.Arch.NATIVE, name) == -1:
+                continue  # syscall unknown on this architecture
+            filt.add_rule(action, name, *args)
 
     r, w = os.pipe()
     with os.fdopen(w, "wb") as wf:
