@@ -50,7 +50,7 @@ def main():
     for path in (opts.write_paths or []):
         bwrap += ["--bind", path, path]
 
-    bwrap += ["--setenv", "PATH", "/usr/local/bin:/usr/bin:/bin"]
+    bwrap += ["--setenv", "PATH", os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin")]
 
     for var in (opts.env_vars or []):
         val = os.environ.get(var)
