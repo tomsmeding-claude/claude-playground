@@ -15,13 +15,21 @@ DEFAULT_BINDS = [
 ]
 
 def main():
+    bind_ops = []  # list of ("ro"|"rw", path), preserving user-specified order
+
+    def collect_bind(option, opt_str, value, parser):
+        kind = "ro" if option.dest == "read_paths" else "rw"
+        bind_ops.append((kind, value))
+
     parser = optparse.OptionParser(usage="%prog [options] [--] [command]")
     parser.disable_interspersed_args()
 
-    parser.add_option("-r", "--read", action="append", dest="read_paths",
-                      metavar="PATH", help="bind PATH read-only in the sandbox")
-    parser.add_option("-w", "--write", action="append", dest="write_paths",
-                      metavar="PATH", help="bind PATH read-write in the sandbox")
+    parser.add_option("-r", "--read", action="callback", callback=collect_bind,
+                      type="string", dest="read_paths", metavar="PATH",
+                      help="bind PATH read-only in the sandbox")
+    parser.add_option("-w", "--write", action="callback", callback=collect_bind,
+                      type="string", dest="write_paths", metavar="PATH",
+                      help="bind PATH read-write in the sandbox")
     parser.add_option("--env", action="append", dest="env_vars",
                       metavar="VAR", help="preserve VAR inside the sandbox")
     parser.add_option("--nonet", action="store_true", default=False,
@@ -44,18 +52,17 @@ def main():
             if os.path.exists(path):
                 bwrap += ["--ro-bind", path, path]
 
-    for path in (opts.read_paths or []):
-        bwrap += ["--ro-bind", path, path]
-
-    for path in (opts.write_paths or []):
-        bwrap += ["--bind", path, path]
+    for kind, path in bind_ops:
+        flag = "--ro-bind" if kind == "ro" else "--bind"
+        bwrap += [flag, path, path]
 
     bwrap += ["--setenv", "PATH", os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin")]
 
     for var in (opts.env_vars or []):
         val = os.environ.get(var)
-        if val is not None:
-            bwrap += ["--setenv", var, val]
+        if val is None:
+            sys.exit(f"error: environment variable {var!r} is not set")
+        bwrap += ["--setenv", var, val]
 
     if args:
         command = args
