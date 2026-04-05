@@ -72,6 +72,24 @@ def _build_seccomp_fd(profile_path):
     return r
 
 
+def _build_tiocsti_block_fd():
+    """Block TIOCSTI (terminal keystroke injection) via a supplemental seccomp filter.
+
+    This is needed because we don't use --new-session, so the sandbox inherits
+    the caller's controlling terminal. TIOCSTI is enabled on this system
+    (legacy_tiocsti=1) and would otherwise allow injecting keystrokes into the
+    parent shell after the sandbox exits.
+    """
+    TIOCSTI = 0x5412
+    filt = seccomp.SyscallFilter(defaction=seccomp.ALLOW)
+    filt.add_rule(seccomp.ERRNO(1), "ioctl", seccomp.Arg(1, seccomp.EQ, TIOCSTI))
+    r, w = os.pipe()
+    with os.fdopen(w, "wb") as wf:
+        filt.export_bpf(wf)
+    os.set_inheritable(r, True)
+    return r
+
+
 def main():
     bind_ops = []  # list of ("ro"|"rw", path), preserving user-specified order
 
@@ -101,12 +119,14 @@ def main():
         sys.exit("error: refusing to run as root")
 
     seccomp_fd = _build_seccomp_fd(_SECCOMP_PROFILE)
+    tiocsti_fd = _build_tiocsti_block_fd()
 
     bwrap = ["bwrap",
-             "--new-session", "--unshare-all", "--die-with-parent",
+             "--unshare-all", "--die-with-parent",
              "--proc", "/proc",
              "--dev", "/dev",
-             "--seccomp", str(seccomp_fd)]
+             "--add-seccomp-fd", str(seccomp_fd),
+             "--add-seccomp-fd", str(tiocsti_fd)]
 
     if not opts.nonet:
         bwrap += ["--share-net"]
